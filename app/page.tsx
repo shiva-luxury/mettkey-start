@@ -4,12 +4,20 @@ import { useState } from 'react'
 import BlogTab from './components/BlogTab'
 import SocialTab from './components/SocialTab'
 import NewsletterTab from './components/NewsletterTab'
+import VideoScriptTab from './components/VideoScriptTab'
+import LeadMagnetTab from './components/LeadMagnetTab'
+import GenerateAllTab from './components/GenerateAllTab'
+import SettingsPanel from './components/SettingsPanel'
 import { APP_NAME, BRAND, NMLS } from './lib/constants'
 
 const TABS = [
   { id: 'blog', label: 'Blog', emoji: '📝' },
   { id: 'social', label: 'Social', emoji: '📣' },
   { id: 'newsletter', label: 'Newsletter', emoji: '✉️' },
+  { id: 'video', label: 'Video Scripts', emoji: '🎬' },
+  { id: 'magnet', label: 'Lead Magnet', emoji: '🧲' },
+  { id: 'generateAll', label: 'Generate All', emoji: '⚡' },
+  { id: 'settings', label: 'Settings', emoji: '⚙️' },
 ]
 
 export default function Home() {
@@ -50,6 +58,10 @@ export default function Home() {
         {activeTab === 'blog' && <BlogTab />}
         {activeTab === 'social' && <SocialTab />}
         {activeTab === 'newsletter' && <NewsletterTab />}
+        {activeTab === 'video' && <VideoScriptTab />}
+        {activeTab === 'magnet' && <LeadMagnetTab />}
+        {activeTab === 'generateAll' && <GenerateAllTab />}
+        {activeTab === 'settings' && <SettingsPanel />}
       </main>
 
       <footer className="border-t border-[var(--border)] py-5 px-6 text-center text-xs text-[var(--text-muted)]">

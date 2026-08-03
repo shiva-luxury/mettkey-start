@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import {
-  Card, Label, Button, Input, SubTabs, CopyButton, ErrorBox, ComplianceWarning,
+  Card, Label, Button, Input, SubTabs, CopyButton, BufferPostButton, ErrorBox, ComplianceWarning,
 } from './ui'
 import { callClaude, parseClaudeJSON } from '../lib/api'
 import { withDisclaimer, COMPLIANCE_DISCLAIMER, NMLS, scanForComplianceRisks } from '../lib/constants'
@@ -102,7 +102,10 @@ Return ONLY valid JSON: {"caption": string (100-150 words, includes the disclaim
       <ComplianceWarning flags={flags} />
       {result && (
         <Card>
-          <div className="flex justify-end mb-2"><CopyButton text={fullText} label="Copy Caption + Hashtags" /></div>
+          <div className="flex justify-end gap-2 mb-2">
+            <BufferPostButton text={fullText} />
+            <CopyButton text={fullText} label="Copy Caption + Hashtags" />
+          </div>
           <p className="text-sm whitespace-pre-wrap mb-3">{result.caption}</p>
           <p className="text-sm text-[var(--teal-dark)]">{result.hashtags.join(' ')}</p>
         </Card>
@@ -154,7 +157,10 @@ Return ONLY valid JSON: {"slides": [{"headline": string, "body": string}] (6-8 i
       <ComplianceWarning flags={flags} />
       {result && (
         <div className="space-y-3">
-          <div className="flex justify-end"><CopyButton text={fullText} label="Copy Entire Carousel" /></div>
+          <div className="flex justify-end gap-2">
+            <BufferPostButton text={result.caption} label="Post Caption via Buffer" />
+            <CopyButton text={fullText} label="Copy Entire Carousel" />
+          </div>
           <div className="grid sm:grid-cols-2 gap-3">
             {result.slides.map((s, i) => (
               <Card key={i}>
@@ -278,7 +284,10 @@ Return ONLY valid JSON: {"post": string (150-250 words, ends with the disclaimer
       <ComplianceWarning flags={flags} />
       {result && (
         <Card>
-          <div className="flex justify-end mb-2"><CopyButton text={result.post} /></div>
+          <div className="flex justify-end gap-2 mb-2">
+            <BufferPostButton text={result.post} />
+            <CopyButton text={result.post} />
+          </div>
           <p className="text-sm whitespace-pre-wrap">{result.post}</p>
         </Card>
       )}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSettings } from '../lib/settings'
 
 export function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
@@ -171,6 +172,70 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
     >
       {copied ? 'Copied!' : label}
     </button>
+  )
+}
+
+/**
+ * "Post via Buffer" button — schedules a single piece of copy-ready social text through
+ * our /api/buffer proxy, using the Buffer access token + profile IDs saved in Settings
+ * (app/lib/settings.ts). Only meant for genuinely postable pieces (captions, LinkedIn
+ * posts, etc.) — never for raw blog bodies or newsletter HTML.
+ */
+export function BufferPostButton({ text, label = 'Post via Buffer' }: { text: string; label?: string }) {
+  const { settings } = useSettings()
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [message, setMessage] = useState('')
+
+  const post = async () => {
+    if (!settings.bufferAccessToken || !settings.bufferProfileIds.trim()) {
+      setStatus('error')
+      setMessage('Add your Buffer access token and profile IDs in Settings first.')
+      return
+    }
+    setStatus('loading')
+    setMessage('')
+    try {
+      // Schedule a few minutes out rather than "now" — mirrors shiva-lead-engine's default.
+      const scheduledAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
+      const res = await fetch('/api/buffer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accessToken: settings.bufferAccessToken,
+          profileIds: settings.bufferProfileIds.split(',').map((s) => s.trim()).filter(Boolean),
+          posts: [{ text, scheduledAt }],
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Buffer scheduling failed')
+      if (data.succeeded > 0) {
+        setStatus('success')
+        setMessage('Scheduled to Buffer')
+      } else {
+        setStatus('error')
+        setMessage('Buffer did not accept the post — check your token and profile IDs.')
+      }
+    } catch (e) {
+      setStatus('error')
+      setMessage(e instanceof Error ? e.message : 'Something went wrong')
+    }
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <button
+        onClick={post}
+        type="button"
+        disabled={status === 'loading'}
+        className="text-xs px-2.5 py-1 border border-[var(--border)] rounded-md bg-white hover:bg-[var(--surface)] transition-all whitespace-nowrap shrink-0 inline-flex items-center gap-1.5 disabled:opacity-50"
+      >
+        {status === 'loading' && <span className="spinner" />}
+        {status === 'success' ? 'Scheduled!' : status === 'error' ? 'Retry Post' : label}
+      </button>
+      {message && (
+        <span className={`text-xs ${status === 'error' ? 'text-red-600' : 'text-[var(--teal-dark)]'}`}>{message}</span>
+      )}
+    </span>
   )
 }
 
