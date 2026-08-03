@@ -62,6 +62,75 @@ export default function BlogTab() {
 
 // ---------- Research & Write ----------
 
+type TrendingHeadline = { title: string; link: string; source: string; pubDate: string }
+
+function TrendingTopicsSection({ topic, setTopic }: { topic: string; setTopic: (t: string) => void }) {
+  const [headlines, setHeadlines] = useState<TrendingHeadline[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [fetchedAt, setFetchedAt] = useState('')
+
+  const run = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/trending', { cache: 'no-store' })
+      if (!res.ok) throw new Error(`Trending feed request failed (${res.status}).`)
+      const data = (await res.json()) as { headlines: TrendingHeadline[]; fetchedAt: string }
+      setHeadlines(data.headlines || [])
+      setFetchedAt(data.fetchedAt || '')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not load trending topics.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    run()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-1.5">
+        <Label>Live Trending Mortgage Topics</Label>
+        <Button variant="ghost" loading={loading} onClick={run} className="!px-2 !py-1 text-xs">
+          Refresh
+        </Button>
+      </div>
+      {error && <ErrorBox message={error} onRetry={run} />}
+      {!error && loading && headlines.length === 0 && (
+        <p className="text-xs text-[var(--text-muted)] mb-3">Loading live headlines…</p>
+      )}
+      {headlines.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-1">
+          {headlines.map((h, i) => (
+            <button
+              key={`${h.title}-${i}`}
+              type="button"
+              onClick={() => setTopic(h.title)}
+              title={h.link || undefined}
+              className={`px-3 py-1.5 text-xs rounded-full border transition-all max-w-full ${
+                topic === h.title
+                  ? 'bg-[var(--ink)] text-white border-[var(--ink)]'
+                  : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--ink-light)]'
+              }`}
+            >
+              {h.title} <span className="opacity-60">· {h.source}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {fetchedAt && (
+        <p className="text-xs text-[var(--text-muted)] mt-1">
+          Updated {new Date(fetchedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+        </p>
+      )}
+    </div>
+  )
+}
+
 function ResearchAndWriteTab() {
   const todaysTopics = getTodaysTopics(6)
   const [topic, setTopic] = useState('')
@@ -71,6 +140,9 @@ function ResearchAndWriteTab() {
   const [flags, setFlags] = useState<string[]>([])
   const [stage, setStage] = useState<'idle' | 'researching' | 'writing' | 'done'>('idle')
   const [error, setError] = useState('')
+  const [publishState, setPublishState] = useState<'idle' | 'publishing' | 'done' | 'error'>('idle')
+  const [publishError, setPublishError] = useState('')
+  const [publishResult, setPublishResult] = useState<{ commitUrl: string | null; fileUrl: string | null } | null>(null)
 
   const run = async () => {
     if (!topic.trim()) {
@@ -81,6 +153,9 @@ function ResearchAndWriteTab() {
     setPost(null)
     setResearch(null)
     setFlags([])
+    setPublishState('idle')
+    setPublishError('')
+    setPublishResult(null)
     try {
       setStage('researching')
       const researchPrompt = `Research the current state of "${topic}" for California homeowners and homebuyers using live web search. Look for current mortgage rates, loan limits, program details, and any recent (2025-2026) changes relevant to this topic in California specifically.
@@ -149,6 +224,41 @@ Return ONLY valid JSON, no prose before or after, matching exactly this schema:
 
   const image = post ? pickImageForCategory(post.category, post.slug) : null
 
+  const publish = async () => {
+    if (!post) return
+    setPublishState('publishing')
+    setPublishError('')
+    setPublishResult(null)
+    try {
+      const res = await fetch('/api/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: post.slug,
+          title: post.title,
+          metaTitle: post.metaTitle,
+          metaDescription: post.metaDescription,
+          keyword: post.keyword,
+          date: new Date().toISOString().slice(0, 10),
+          excerpt: post.excerpt,
+          category: post.category,
+          image: image ? getImageUrl(image.id) : undefined,
+          body: post.body,
+          internalLinks: post.internalLinks.map((l) => ({ label: l, href: '/#guides' })),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || `Publish failed (${res.status}).`)
+      }
+      setPublishResult({ commitUrl: data.commitUrl, fileUrl: data.fileUrl })
+      setPublishState('done')
+    } catch (e) {
+      setPublishError(e instanceof Error ? e.message : 'Something went wrong publishing.')
+      setPublishState('error')
+    }
+  }
+
   const blogPostsArrayEntry = post
     ? `{
   slug: '${post.slug}',
@@ -172,7 +282,8 @@ ${post.internalLinks.map((l) => `    ${JSON.stringify(l)}`).join(',\n')}
   return (
     <div>
       <Card className="mb-6">
-        <Label>Today&apos;s Suggested Topics</Label>
+        <TrendingTopicsSection topic={topic} setTopic={setTopic} />
+        <Label>Evergreen Topics</Label>
         <div className="flex flex-wrap gap-1.5 mb-4">
           {todaysTopics.map((t) => (
             <button
@@ -224,9 +335,33 @@ ${post.internalLinks.map((l) => `    ${JSON.stringify(l)}`).join(',\n')}
 
       {post && image && (
         <div className="space-y-5">
-          <div className="flex justify-end">
-            <CopyButton text={blogPostsArrayEntry} label="Copy BLOG_POSTS Entry" />
+          <div className="flex justify-end items-center gap-2 flex-wrap">
+            <CopyButton text={blogPostsArrayEntry} label="Copy BLOG_POSTS Entry (backup)" />
+            <Button variant="primary" loading={publishState === 'publishing'} onClick={publish}>
+              {publishState === 'publishing' ? 'Publishing…' : 'Publish to mettkey.com'}
+            </Button>
           </div>
+
+          {publishState === 'error' && <ErrorBox message={publishError} onRetry={publish} />}
+
+          {publishState === 'done' && publishResult && (
+            <div className="border-2 border-emerald-400 bg-emerald-50 text-emerald-900 text-sm rounded-lg px-4 py-3">
+              <p className="font-semibold mb-1">Published to mettkey-site.</p>
+              <p>Live on mettkey.com/blog in ~1 minute after Vercel rebuilds.</p>
+              <div className="flex gap-3 mt-2">
+                {publishResult.commitUrl && (
+                  <a href={publishResult.commitUrl} target="_blank" rel="noopener noreferrer" className="underline">
+                    View commit
+                  </a>
+                )}
+                {publishResult.fileUrl && (
+                  <a href={publishResult.fileUrl} target="_blank" rel="noopener noreferrer" className="underline">
+                    View file
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
 
           <Card>
             <img src={getImageUrl(image.id)} alt={image.alt} className="w-full h-48 object-cover rounded-lg mb-4" />
