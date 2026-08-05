@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import DashboardTab from './components/DashboardTab'
+import DraftsQueueTab from './components/DraftsQueueTab'
 import BlogTab from './components/BlogTab'
 import SocialTab from './components/SocialTab'
 import NewsletterTab from './components/NewsletterTab'
@@ -11,6 +13,8 @@ import SettingsPanel from './components/SettingsPanel'
 import { APP_NAME, BRAND, NMLS } from './lib/constants'
 
 const TABS = [
+  { id: 'dashboard', label: 'Dashboard', emoji: '🏠' },
+  { id: 'drafts', label: 'Drafts Queue', emoji: '🗂️' },
   { id: 'blog', label: 'Blog', emoji: '📝' },
   { id: 'social', label: 'Social', emoji: '📣' },
   { id: 'newsletter', label: 'Newsletter', emoji: '✉️' },
@@ -21,7 +25,7 @@ const TABS = [
 ]
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState('blog')
+  const [activeTab, setActiveTab] = useState('dashboard')
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -55,6 +59,8 @@ export default function Home() {
       </header>
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8">
+        {activeTab === 'dashboard' && <DashboardTab />}
+        {activeTab === 'drafts' && <DraftsQueueTab />}
         {activeTab === 'blog' && <BlogTab />}
         {activeTab === 'social' && <SocialTab />}
         {activeTab === 'newsletter' && <NewsletterTab />}
