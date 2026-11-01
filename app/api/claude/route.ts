@@ -2,6 +2,8 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { scanForComplianceRisks, COMPLIANCE_DISCLAIMER } from '../../lib/constants'
 
+export const dynamic = 'force-dynamic'
+
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })

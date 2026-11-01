@@ -12,6 +12,7 @@ import type {
   ControversialIdeaDraft,
   SocialPlatform,
 } from './drafts'
+import { parseModelJSON } from './parseModelJSON'
 
 /**
  * This runs server-side inside a cron API route, not the browser, so it cannot use
@@ -67,30 +68,9 @@ async function callClaudeServer(
   return { text, complianceFlags: scanForComplianceRisks(text) }
 }
 
-/** Same extraction strategy as app/lib/api.ts's parseClaudeJSON, duplicated for server-side use. */
+/** Shared forgiving parser — see app/lib/parseModelJSON.ts. Throws ModelJSONError with the raw text on failure. */
 function parseJSON<T>(text: string): T {
-  let cleaned = text.trim()
-  const fenceMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (fenceMatch) cleaned = fenceMatch[1].trim()
-  try {
-    return JSON.parse(cleaned) as T
-  } catch {
-    const firstObj = cleaned.indexOf('{')
-    const firstArr = cleaned.indexOf('[')
-    let start = -1
-    let closeChar = '}'
-    if (firstArr !== -1 && (firstObj === -1 || firstArr < firstObj)) {
-      start = firstArr
-      closeChar = ']'
-    } else {
-      start = firstObj
-      closeChar = '}'
-    }
-    if (start === -1) throw new Error('Claude did not return parseable JSON for a daily-batch piece.')
-    const end = cleaned.lastIndexOf(closeChar)
-    if (end === -1 || end <= start) throw new Error('Claude did not return parseable JSON for a daily-batch piece.')
-    return JSON.parse(cleaned.slice(start, end + 1)) as T
-  }
+  return parseModelJSON<T>(text)
 }
 
 function slugify(title: string): string {

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDraftsIndex, getDraftBatch } from '../../lib/drafts'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/drafts            -> the drafts index (list of {date, topic})
  * GET /api/drafts?date=YYYY-MM-DD -> that date's full DailyBatch

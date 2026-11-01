@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { updateDraftStatus, DraftStatus } from '../../../lib/drafts'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   try {
     const { date, pieceType, pieceIndex, status } = (await req.json()) as {

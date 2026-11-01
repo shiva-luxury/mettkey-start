@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getTodaysTopics } from '../../lib/topics'
 
+export const dynamic = 'force-dynamic'
+
 export type Headline = { title: string; link: string; source: string; pubDate: string }
 
 /**

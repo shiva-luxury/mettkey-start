@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 const REPO = 'shiva-luxury/mettkey-site'
 const FILE_PATH = 'lib/blog.ts'
 const BRANCH = 'main'

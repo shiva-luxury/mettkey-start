@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateDailyBatch, fallbackTopic } from '../../../lib/generateDailyBatch'
 import { saveDraftBatch } from '../../../lib/drafts'
 
+export const dynamic = 'force-dynamic'
+
 export const maxDuration = 300
 
 type TrendingResponse = { headlines: { title: string }[] }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Card, Label, Button, CopyButton, ErrorBox, ComplianceWarning, Expandable } from './ui'
 import { COMPLIANCE_DISCLAIMER } from '../lib/constants'
+import { ScheduleInBufferButton, ScheduleFullWeekButton, BufferQueuePanel } from './BufferControls'
 import type {
   DailyBatch,
   DraftStatus,
@@ -193,6 +194,26 @@ function BlogCard({ blog, date, update, pending }: { blog: BlogDraft; date: stri
 
 // ---------- Video card ----------
 
+const TIKTOK_HASHTAGS = '#mortgage #californiahomes #homebuyer #losangeles #mortgagetips'
+
+/** Ready-to-post TikTok package: caption, hashtags, and the script, formatted for a 60-second manual post. */
+function buildTikTokPackage(video: VideoScriptDraft, hookIndex: number): string {
+  const hook = video.data.hooks[hookIndex] || video.data.hooks[0]
+  const script = video.data.segments.map((s) => `[${s.timestamp}] ${s.content}`).join('\n')
+  return [
+    `CAPTION`,
+    `${hook}`,
+    ``,
+    `${video.data.cta}`,
+    ``,
+    `HASHTAGS (edit to taste)`,
+    TIKTOK_HASHTAGS,
+    ``,
+    `SCRIPT`,
+    script,
+  ].join('\n')
+}
+
 function VideoCard({ video, index, update, pending }: { video: VideoScriptDraft; index: number; update: ReturnType<typeof useStatusUpdater>['update']; pending: string | null }) {
   const [hookIndex, setHookIndex] = useState(video.data.chosenHookIndex)
   const chosenHook = video.data.hooks[hookIndex] || video.data.hooks[0]
@@ -276,9 +297,14 @@ function VideoCard({ video, index, update, pending }: { video: VideoScriptDraft;
         <Button variant="outline" className="!py-1 !px-2.5 text-xs" onClick={() => copyAndOpen(fullScript, CANVA_VIDEO_URL)}>
           Copy Caption + Open Canva
         </Button>
-        <Button variant="outline" className="!py-1 !px-2.5 text-xs" onClick={() => copyAndOpen(chosenHook + '\n\n' + video.data.cta, 'https://www.tiktok.com/upload')}>
-          Copy + Open TikTok
+        <Button variant="outline" className="!py-1 !px-2.5 text-xs" onClick={() => copyAndOpen(buildTikTokPackage(video, hookIndex), 'https://www.tiktok.com/upload')}>
+          Copy TikTok Package + Open TikTok
         </Button>
+        {video.status === 'approved' && (
+          <p className="text-xs text-[var(--text-muted)] w-full mt-1">
+            Video scripts aren&apos;t scheduled in Buffer — Buffer&apos;s API can&apos;t attach a video file. Post this one from TikTok (about a minute with the package above).
+          </p>
+        )}
       </div>
     </Card>
   )
@@ -292,7 +318,7 @@ const PLATFORM_URLS: Record<string, string> = {
   Facebook: 'https://www.facebook.com/mettkey/',
 }
 
-function SocialCard({ social, index, update, pending }: { social: SocialCaptionDraft; index: number; update: ReturnType<typeof useStatusUpdater>['update']; pending: string | null }) {
+function SocialCard({ social, index, date, update, pending }: { social: SocialCaptionDraft; index: number; date: string; update: ReturnType<typeof useStatusUpdater>['update']; pending: string | null }) {
   const fullText = social.data.hashtags.length ? `${social.data.caption}\n\n${social.data.hashtags.join(' ')}` : social.data.caption
   const platformUrl = PLATFORM_URLS[social.data.platform] || 'https://www.google.com'
 
@@ -319,6 +345,9 @@ function SocialCard({ social, index, update, pending }: { social: SocialCaptionD
         <Button variant="outline" className="!py-1 !px-2.5 text-xs" onClick={() => copyAndOpen(fullText, platformUrl)}>
           Copy + Open {social.data.platform}
         </Button>
+      </div>
+      <div className="mt-3">
+        <ScheduleInBufferButton date={date} pieceType="social" pieceIndex={index} approved={social.status === 'approved'} />
       </div>
     </Card>
   )
@@ -361,7 +390,7 @@ function NewsletterCard({ newsletter, update, pending }: { newsletter: Newslette
 
 // ---------- Carousel card ----------
 
-function CarouselCard({ carousel, update, pending }: { carousel: CarouselDraft; update: ReturnType<typeof useStatusUpdater>['update']; pending: string | null }) {
+function CarouselCard({ carousel, date, update, pending }: { carousel: CarouselDraft; date: string; update: ReturnType<typeof useStatusUpdater>['update']; pending: string | null }) {
   const fullText = `${carousel.data.slides.map((s, i) => `Slide ${i + 1}: ${s.headline}\n${s.body}`).join('\n\n')}\n\nCaption:\n${carousel.data.caption}`
   return (
     <Card>
@@ -392,6 +421,10 @@ function CarouselCard({ carousel, update, pending }: { carousel: CarouselDraft; 
         <Button variant="outline" className="!py-1 !px-2.5 text-xs" onClick={() => copyAndOpen(carousel.data.caption, CANVA_SOCIAL_URL)}>
           Copy Caption + Open Canva
         </Button>
+      </div>
+      <p className="text-xs text-[var(--text-muted)] mt-3">Buffer sends carousels to Instagram and LinkedIn as a reminder (not auto-published), so you can attach the slides first.</p>
+      <div className="mt-2">
+        <ScheduleInBufferButton date={date} pieceType="carousel" pieceIndex={null} approved={carousel.status === 'approved'} />
       </div>
     </Card>
   )
@@ -642,6 +675,8 @@ export default function DraftsQueueTab() {
       {error && <ErrorBox message={error} onRetry={() => loadBatch(selectedDate)} />}
       {updateError && <ErrorBox message={updateError} />}
 
+      {index.length > 0 && <ScheduleFullWeekButton onScheduled={() => loadIndex()} />}
+      <BufferQueuePanel />
       {index.length > 0 && <ExportWeekButton index={index} />}
 
       {loadingBatch && <p className="text-sm text-[var(--text-muted)]">Loading {selectedDate}…</p>}
@@ -660,13 +695,13 @@ export default function DraftsQueueTab() {
 
           <div className="grid md:grid-cols-3 gap-4">
             {batch.socials.map((s, i) => (
-              <SocialCard key={i} social={s} index={i} update={update} pending={pending} />
+              <SocialCard key={i} social={s} index={i} date={batch.date} update={update} pending={pending} />
             ))}
           </div>
 
           <NewsletterCard newsletter={batch.newsletter} update={update} pending={pending} />
 
-          <CarouselCard carousel={batch.carousel} update={update} pending={pending} />
+          <CarouselCard carousel={batch.carousel} date={batch.date} update={update} pending={pending} />
 
           <div className="grid md:grid-cols-3 gap-4">
             {batch.controversial.map((c, i) => (

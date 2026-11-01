@@ -324,7 +324,7 @@ export function LastUpdated({ timestamp }: { timestamp: string | null }) {
 export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div className="border border-red-200 bg-red-50 text-red-700 text-sm rounded-lg px-4 py-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
-      <span>{message}</span>
+      <span className="whitespace-pre-wrap break-words min-w-0 flex-1 text-xs leading-relaxed max-h-64 overflow-y-auto">{message}</span>
       {onRetry && (
         <button
           onClick={onRetry}
